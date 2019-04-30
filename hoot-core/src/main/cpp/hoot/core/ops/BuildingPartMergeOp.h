@@ -37,6 +37,7 @@
 #include <hoot/core/util/StringUtils.h>
 #include <hoot/core/util/Configurable.h>
 #include <hoot/core/algorithms/merging/BuildingPartPreMergeCollector.h>
+#include <hoot/core/util/ProgressReporter.h>
 
 // TGS
 #include <tgs/DisjointSet/DisjointSetMap.h>
@@ -93,7 +94,7 @@ namespace hoot
  * building level.
  */
 class BuildingPartMergeOp : public OsmMapOperation, public Serializable, public OperationStatusInfo,
-  public Configurable
+  public Configurable, public ProgressReporter
 {
 public:
 
@@ -140,6 +141,9 @@ public:
   int getTotalBuildingGroupsProcessed() const { return _totalBuildingGroupsProcessed; }
   int getNumBuildingGroupsMerged() const { return _numBuildingGroupsMerged; }
 
+  virtual void setProgress(Progress progress) { _progress = progress; }
+  virtual int getNumSteps() const { return 2; }
+
 private:
 
   // used to keep track of which elements make up a building
@@ -156,6 +160,9 @@ private:
   int _numBuildingGroupsMerged;
 
   int _threadCount;
+
+  Progress _progress;
+  int _currentTaskNum;
 
   void _init(OsmMapPtr& map);
   void _initBuildingPartTagNames();

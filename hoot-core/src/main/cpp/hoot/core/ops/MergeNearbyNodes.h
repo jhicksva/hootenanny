@@ -35,6 +35,7 @@
 #include <hoot/core/util/Units.h>
 #include <hoot/core/info/OperationStatusInfo.h>
 #include <hoot/core/util/StringUtils.h>
+#include <hoot/core/util/ProgressReporter.h>
 
 // GEOS
 #include <geos/geom/Envelope.h>
@@ -50,7 +51,7 @@ class OsmMap;
  * The input map can be in either a planar or geographic projection.
  */
 class MergeNearbyNodes : public OsmMapOperation, public Serializable, public Boundable,
-  public OperationStatusInfo
+  public OperationStatusInfo, public ProgressReporter
 {
 public:
 
@@ -79,11 +80,18 @@ public:
   virtual QString getCompletedStatusMessage() const
   { return "Merged " + StringUtils::formatLargeNumber(_numAffected) + " node pairs."; }
 
+  virtual void setProgress(Progress progress) { _progress = progress; }
+  virtual int getNumSteps() const { return 2; }
+
+
 protected:
 
   boost::shared_ptr<OsmMap> _map;
   Meters _distance;
   geos::geom::Envelope _bounds;
+
+  Progress _progress;
+  int _currentTaskNum;
 };
 
 }

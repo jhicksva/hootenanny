@@ -53,7 +53,8 @@ HOOT_FACTORY_REGISTER(OsmMapOperation, BuildingPartMergeOp)
 BuildingPartMergeOp::BuildingPartMergeOp() :
 _totalBuildingGroupsProcessed(0),
 _numBuildingGroupsMerged(0),
-_threadCount(1)
+_threadCount(1),
+_currentTaskNum(1)
 {
   _initBuildingPartTagNames();
 }
@@ -89,6 +90,7 @@ void BuildingPartMergeOp::_init(OsmMapPtr& map)
   _numAffected = 0;
   _totalBuildingGroupsProcessed = 0;
   _numBuildingGroupsMerged = 0;
+  _currentTaskNum = 1;
 }
 
 void BuildingPartMergeOp::apply(OsmMapPtr& map)
@@ -266,6 +268,13 @@ QQueue<BuildingPartRelationship> BuildingPartMergeOp::_getBuildingPartPreProcess
 
 void BuildingPartMergeOp::_preProcessBuildingParts()
 {
+  if (_progress.getTaskWeight() != 0.0 && _progress.getState() == "RUNNING")
+  {
+    _progress.setFromRelative(
+      (float)(_currentTaskNum - 1) / (float)getNumSteps(), "Running", false,
+      "Pre-processing building parts...");
+  }
+
   QQueue<BuildingPartRelationship> buildingPartsInput = _getBuildingPartPreProcessingInput();
 
   QMutex buildingPartsInputMutex;
@@ -296,10 +305,18 @@ void BuildingPartMergeOp::_preProcessBuildingParts()
   LOG_VART(allThreadsRemoved);
 
   LOG_VARD(StringUtils::formatLargeNumber(_buildingPartGroups.size()));
+  _currentTaskNum++;
 }
 
 void BuildingPartMergeOp::_mergeBuildingParts()
 {
+  if (_progress.getTaskWeight() != 0.0 && _progress.getState() == "RUNNING")
+  {
+    _progress.setFromRelative(
+      (float)(_currentTaskNum - 1) / (float)getNumSteps(), "Running", false,
+      "Merging building parts...");
+  }
+
   // go through each of the grouped buildings
   const Tgs::DisjointSetMap<ElementPtr>::AllGroups& groups = _buildingPartGroups.getAllGroups();
   for (Tgs::DisjointSetMap<ElementPtr>::AllGroups::const_iterator it = groups.begin();
@@ -325,6 +342,8 @@ void BuildingPartMergeOp::_mergeBuildingParts()
         StringUtils::formatLargeNumber(_totalBuildingGroupsProcessed) << " building groups.");
     }
   }
+
+  _currentTaskNum++;
 }
 
 std::set<long> BuildingPartMergeOp::_calculateNeighbors(const ConstWayPtr& way, const Tags& tags)

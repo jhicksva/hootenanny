@@ -63,9 +63,10 @@ double calcDistanceSquared(const NodePtr& n1, const NodePtr& n2)
   return dx * dx + dy * dy;
 }
 
-MergeNearbyNodes::MergeNearbyNodes(Meters distance)
+MergeNearbyNodes::MergeNearbyNodes(Meters distance) :
+_distance(distance),
+_currentTaskNum(1)
 {
-  _distance = distance;
   if (_distance < 0.0)
   {
     _distance = ConfigOptions().getMergeNearbyNodesDistance();
@@ -76,6 +77,7 @@ void MergeNearbyNodes::apply(boost::shared_ptr<OsmMap>& map)
 {
   QTime time;
   time.start();
+  _currentTaskNum = 1;
 
   boost::shared_ptr<OsmMap> wgs84;
   boost::shared_ptr<OsmMap> planar;
@@ -103,17 +105,27 @@ void MergeNearbyNodes::apply(boost::shared_ptr<OsmMap>& map)
   const NodeMap& nodes = planar->getNodes();
   for (NodeMap::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
   {
+    if (startNodeCount == 0 || startNodeCount % 100000 == 0)
+    {
+//      PROGRESS_INFO(
+//        "\tInitialized " << StringUtils::formatLargeNumber(startNodeCount) << " nodes / " <<
+//        StringUtils::formatLargeNumber(nodes.size()) << " for merging.");
+      if (_progress.getTaskWeight() != 0.0 && _progress.getState() == "RUNNING")
+      {
+        _progress.setFromRelative(
+          (float)((_currentTaskNum - 1) * startNodeCount) / (float)(nodes.size() * getNumSteps()),
+          "Running", false,
+          "\tInitialized " + StringUtils::formatLargeNumber(startNodeCount) + " nodes / " +
+          StringUtils::formatLargeNumber(nodes.size()) + " for merging.", true);
+      }
+    }
+
     const NodePtr& n = it->second;
     cph.addPoint(n->getX(), n->getY(), n->getId());
     startNodeCount++;
-
-    if (startNodeCount % 100000 == 0)
-    {
-      PROGRESS_INFO(
-        "\tInitialized " << StringUtils::formatLargeNumber(startNodeCount) << " nodes / " <<
-        StringUtils::formatLargeNumber(nodes.size()) << " for merging.");
-    }
   }
+
+  _currentTaskNum++;
 
   double distanceSquared = _distance * _distance;
 
@@ -121,11 +133,26 @@ void MergeNearbyNodes::apply(boost::shared_ptr<OsmMap>& map)
   cph.resetIterator();
   while (cph.next())
   {
+    if (processedCount == 0 || processedCount % 10000 == 0)
+    {
+//      PROGRESS_INFO(
+//        "\tMerged " << StringUtils::formatLargeNumber(_numAffected) << " point groups / " <<
+//        StringUtils::formatLargeNumber(startNodeCount) << " total points.");
+      if (_progress.getTaskWeight() != 0.0 && _progress.getState() == "RUNNING")
+      {
+        _progress.setFromRelative(
+          (float)((_currentTaskNum - 1) * processedCount) / (float)(processedCount * getNumSteps()),
+          "Running", false,
+          "\tMerged " + StringUtils::formatLargeNumber(_numAffected) + " point groups / " +
+          StringUtils::formatLargeNumber(startNodeCount) + " total points.", true);
+      }
+    }
+
     const vector<long>& v = cph.getMatch();
 
     for (size_t i = 0; i < v.size(); i++)
     {
-      if(!map->containsNode(v[i])) continue;
+      if (!map->containsNode(v[i])) continue;
 
       for (size_t j = 0; j < v.size(); j++)
       {
@@ -165,13 +192,9 @@ void MergeNearbyNodes::apply(boost::shared_ptr<OsmMap>& map)
     }
 
     processedCount++;
-    if (processedCount % 10000 == 0)
-    {
-      PROGRESS_INFO(
-        "\tMerged " << StringUtils::formatLargeNumber(_numAffected) << " node groups / " <<
-        StringUtils::formatLargeNumber(startNodeCount) << " total nodes.");
-    }
   }
+
+  _currentTaskNum++;
 }
 
 void MergeNearbyNodes::mergeNodes(boost::shared_ptr<OsmMap> map, Meters distance)

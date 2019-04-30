@@ -105,7 +105,7 @@ void Progress::set(float percentComplete, QString state, bool jobFinished, QStri
 }
 
 void Progress::setFromRelative(float relativePercentComplete, QString state, bool jobFinished,
-                               QString userMessage, bool logAsProgress)
+                               QString userMessage, bool logAsProgress, bool logMessage)
 {
   // update absolute percent weight
   _lastPercentComplete = _percentComplete;
@@ -121,7 +121,7 @@ void Progress::setFromRelative(float relativePercentComplete, QString state, boo
   _userMessage = userMessage;
   LOG_VART(_userMessage);
   const QString msg = getMessage();
-  if (msg != "")
+  if (msg != "" && logMessage)
   {
     if (!logAsProgress)
     {

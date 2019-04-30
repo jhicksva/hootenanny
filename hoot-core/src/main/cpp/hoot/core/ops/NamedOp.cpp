@@ -122,11 +122,19 @@ void NamedOp::apply(OsmMapPtr& map)
       LOG_VART(_progress.getTaskWeight());
       LOG_VART(_progress.getState());
       LOG_VART(_progress.getPercentComplete());
+      ProgressReporter* progressReporter = dynamic_cast<ProgressReporter*>(t.get());
       if (_progress.getTaskWeight() != 0.0 && _progress.getState() == "RUNNING")
       {
         _progress.setFromRelative(
           (float)(opCount - 1) / (float)_namedOps.size(), "Running", false,
-          _getInitMessage2(s, statusInfo));
+          _getInitMessage2(s, statusInfo), false, progressReporter == 0);
+      }
+      if (progressReporter != 0)
+      {
+        progressReporter->setProgress(
+          Progress(
+            _progress.getSource(), "Running", _progress.getPercentComplete(),
+            1.0 / (float)_namedOps.size()));
       }
 
       Configurable* c = dynamic_cast<Configurable*>(t.get());
@@ -152,11 +160,19 @@ void NamedOp::apply(OsmMapPtr& map)
       LOG_VART(_progress.getTaskWeight());
       LOG_VART(_progress.getState());
       LOG_VART(_progress.getPercentComplete());
+      ProgressReporter* progressReporter = dynamic_cast<ProgressReporter*>(t.get());
       if (_progress.getTaskWeight() != 0.0 && _progress.getState() == "RUNNING")
       {
         _progress.setFromRelative(
           (float)(opCount - 1) / (float)_namedOps.size(), "Running", false,
-          _getInitMessage2(s, statusInfo));
+          _getInitMessage2(s, statusInfo), false, progressReporter == 0);
+      }
+      if (progressReporter != 0)
+      {
+        progressReporter->setProgress(
+          Progress(
+            _progress.getSource(), "Running", _progress.getPercentComplete(),
+            1.0 / (float)_namedOps.size()));
       }
 
       Configurable* c = dynamic_cast<Configurable*>(t.get());
